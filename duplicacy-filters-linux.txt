@@ -1,0 +1,30 @@
+# "e:" will exclude files which match the regex
+# "^[^/]+/" will match the root symlink directory such that whatever follows
+#   in the exclusion must be located as a child of one of the root symlink
+#   directories (e.g. root/.cache or opt/duplicacy)
+e:^[^/]+/\.cache
+e:^[^/]+/\.gem/specs
+e:^[^/]+/\.local/share/letsencrypt
+
+e:^opt/duplicacy
+e:^var/lib/mysql/mysql.sock
+e:^var/named/chroot/dev/
+e:^var/log/sa/
+e:^data/confluence[^/]*/temp/
+e:^var/run/
+e:^var/cache/
+e:^var/lib/php/session/
+e:^var/lib/yum/yumdb/
+e:^var/lib/ntp/drift
+e:^var/lib/random-seed
+# Make sure to be running a daily backup of the mysql data in a form that can be loaded, and back that up, not the raw mysql files
+e:^var/lib/mysql/
+# https://github.com/certbot/certbot/issues/3680#issuecomment-387250383
+e:^var/log/letsencrypt/
+e:^var/webmin/modules/system-status/
+e:^var/lib/readahead/
+e:/\.local/share/gvfs-metadata/
+e:/\.local/share/Steam/
+e:/\.config/sublime-text-3/Cache/
+e:/\.config/google-chrome/ShaderCache/
+e:/\.config/chromium/ShaderCache/
