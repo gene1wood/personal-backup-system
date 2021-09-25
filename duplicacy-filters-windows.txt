@@ -1,0 +1,161 @@
+# notes about this file
+#
+# This file is a generic file which adds some folders and files to the duplicacy backup ignore list
+# This file can be modified as needed, eventually also propose said modifications,
+# if they are generic enough, to the main duplicacy repository on github:
+# https://github.com/gilbertchen/duplicacy/.
+#
+# Regexes:
+#
+#
+#   1. Reasoning of "/" vs "\/" for folder delimitation:
+#       In my opinion using only "/" instead of "\/" looks cleaner.
+#       Secondly, on https://regex101.com/, if the selected language is golang,
+#           it seems the regex still works only with "/", so it's very easy to test.
+#
+#
+#   2. "[^/]+/": has the purpose of assuring that there is only 1 folder in the matched path (only 1 "/")
+#       Example: "(?i)/AppData/[^/]+/Steam/" matches:
+#       "C__abcd_link/leAdministrateur/AppData/Local/Steam/", but it doesnt match:
+#       "C__abcd_link/leAdministrateur/AppData/Local/someotherfolder/Steam/", as there has to be ONLY 1 FOLDER in between "AppData" and "Steam" folders.
+#
+#
+#   3. When the repository is used in the <symlinking backups> mode:
+#           "^[^/]+/" is used just as above,
+#           with the difference that it assures that any path only has 1 folder before (1 "/").
+#       Example: "(?i)^[^/]+/Recovery/" matches:
+#       "some_sym_link/Recovery/", but not
+#       "some_sym_link/Important App/Recovery/" nor
+#       "c:/Users/something/Recovery/" nor
+#       "Users/something/Recovery/" and nor
+#       "Recovery/". (This is what would be evaluated in normal non-symlink mode)
+#
+#       In other words, the purpose of that regex is to handle excluding, at least in Windows,
+#           folders and files which are in HDD root (c:, d:, etc.), when that root is symlinked from the repository.
+#
+#   4. When the repository is used in the normal <backup everything underneath> mode:
+#       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO
+#       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO
+#       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO
+#       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO       TODO
+#
+#   5. (?i) means "case insensitive"
+#
+#   6. [^/]*/: has the purpose of matching a folder which "starts with" or "contains" or "is exactly this" (depending on where it is placed).
+#       The difference between this and the above is the "*" instead of "+", which means 0 or more.
+#       Example: "(?i)^[^/]+/ProgramData/Microsoft[^/]*/" matches both
+#       "many/other/folders/ProgramData/Microsoft OneDrive/" (the name of the folder is "Microsoft OneDrive" so it acts as a "starts with")
+#       "many/other/folders/ProgramData/Microsoft/" (the name of the folder is "Microsoft" so it acts also as a "is exactly")
+#       but will not match "many/other/folders/ProgramData/Micro/" (the name of the folder is "Micro" and not "Microsoft")
+
+## excludes for windows machines
+
+## windows/system files
+
+## recycle bin
+e:(?i)\$RECYCLE\.BIN/
+e:(?i)\$RECYCLED/
+e:(?i)\$RECYCLER/
+
+## Onedrive Cache
+e:(?i)/OneDriveTemp/
+
+## system folders
+e:(?i)^[^/]+/\$GetCurrent/
+e:(?i)^[^/]+/\$SysReset
+e:(?i)^[^/]+/Boot/
+e:(?i)^[^/]+/Config\.Msi/
+e:(?i)^[^/]+/Documents and Settings/
+e:(?i)^[^/]+/MSOCache/
+e:(?i)^[^/]+/PerfLogs/
+e:(?i)^[^/]+/Recovery/
+e:(?i)^[^/]+/System Volume Information/
+e:(?i)^[^/]+/Windows/
+e:(?i)/Temporary Internet Files/
+#e(?i):/Windows/Installer/ ####### i think this may exclude too much!
+
+## windows update related
+e:(?i)^[^/]+/\$Windows\.\~BT/
+e:(?i)^[^/]+/\$Windows\.\~WS/
+e:(?i)^[^/]+/Windows10Upgrade/
+e:(?i)^[^/]+/Windows\.old/
+
+
+## system files in root
+e:(?i)^[^/]+/bootmgr$
+e:(?i)^[^/]+/BOOTNXT$
+e:(?i)^[^/]+/BOOTSECT\.BAK$
+e:(?i)^[^/]+/hiberfil\.sys$
+e:(?i)^[^/]+/pagefile\.sys$
+e:(?i)^[^/]+/swapfile\.sys$
+
+## system files anywhere
+# ntuser.dat may contain come other things at the end, therefore don't end with "$"
+e:(?i)ntuser\.dat
+
+## is this thumbs db correct?
+e:(?i)^[^/]+/thumbs\.db$
+e:(?i)/IconCache\.db
+
+## Local excludes (user specific)
+## Analyze carefully and de-exclude anything that might be useful to someone
+
+## Should we exclude all system's users profiles?
+#e:(?i)^[^/]+/Users/All Users/
+#e:(?i)^[^/]+/Users/Default[^/]*/
+#e:(?i)^[^/]+/Users/Public/
+
+
+###  Exclude all AppData folders with known useless-but-heavy content
+## C:\Users\<username>\AppData\ holds app's configurations specific for each user
+## C:\ProgramData\ holds app's configurations global to all users (everytime you select "Install to all users")
+
+## "packages" is because of "skype modern app" which throws an error even with -vss flag (and duplicacy stops). I have opened a bug to for duplicacy.
+e:(?i)/AppData/Local/Packages/
+
+
+e:(?i)/AppData/[^/]+/Acronis/
+e:(?i)/AppData/[^/]+/Adobe/
+e:(?i)/AppData/[^/]+/Atlassian/SourceTree/[^/]*local/
+e:(?i)/AppData/[^/]+/Comms/
+e:(?i)/AppData/[^/]+/ConnectedDevicesPlatform/
+e:(?i)/AppData/[^/]+/CrashDumps/
+e:(?i)/AppData/[^/]+/CrashPlan/
+e:(?i)/AppData/[^/]+/DBG/
+e:(?i)/AppData/[^/]+/Diagnostics/
+e:(?i)/AppData/[^/]+/Downloaded Installations/
+e:(?i)/AppData/[^/]+/Dropbox/
+e:(?i)/AppData/[^/]+/Duplicati/
+e:(?i)/AppData/[^/]+/ElevatedDiagnostics/
+e:(?i)/AppData/[^/]+/JetBrains/
+e:(?i)/AppData/[^/]+/NVIDIA[^/]*/
+e:(?i)/AppData/[^/]+/Oracle/
+e:(?i)/AppData/[^/]+/Packages/
+e:(?i)/AppData/[^/]+/PackageStaging/
+e:(?i)/AppData/[^/]+/PeerDistRepub/
+e:(?i)/AppData/[^/]+/Publishers/
+e:(?i)/AppData/[^/]+/Sun/
+e:(?i)/AppData/[^/]+/TileDataLayer/
+e:(?i)/AppData/[^/]+/Veeam/
+e:(?i)/AppData/[^/]+/VirtualStore/
+
+
+
+## include Firefox profiles but nothing else from Mozilla
+i:(?i)/AppData/[^/]+/Mozilla/$
+i:(?i)/AppData/[^/]+/Mozilla/Firefox/
+e:(?i)/AppData/[^/]+/Mozilla/
+
+
+## include Chrome profile and Picasa data, but nothing else from Google
+## note that we include the whole profile, because we are unsure how many "users" are added beside the "Default" profile
+i:(?i)/AppData/[^/]+/Google/$
+i:(?i)/AppData/[^/]+/Google/Chrome/$
+e:(?i)/AppData/[^/]+/Google/Chrome/.*Safe Browsing
+
+i:(?i)/AppData/[^/]+/Google/Chrome/User Data/
+i:(?i)/AppData/[^/]+/Google/Picasa[^/]*/
+e:(?i)/AppData/[^/]+/Google/
+
+# Keybase cache
+e:/Keybase/Cache/
