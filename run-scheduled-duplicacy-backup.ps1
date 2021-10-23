@@ -39,10 +39,15 @@ if (-not $network_active) {
     exit 1
 }
 
-if (!(Test-Path "$DUPLICACY_BASEDIR\hc_uuid")) {
+$sftp_arguments = @("-o", "Port=$SERVER_PORT", "-o", "IdentityFile=$KEY_FILE_NAME", "-o", "UserKnownHostsFile=$KNOWN_HOSTS_FILE_NAME", "-o", "BatchMode=yes", "$CLIENT@$SERVER")
+Write-Output "pwd" | & "C:\Windows\System32\OpenSSH\sftp.exe" @sftp_arguments | findstr "Remote working directory: /"
+if ($LASTEXITCODE -ne 0) {
+    Write-Output "$(Get-Date -UFormat "%Y%m%d%H%M%S") ERROR PARENT_UPDATE Unable to sftp to $SERVER" >> "$LOG_BASEDIR/duplicacy.$CLIENT.txt"
+    exit 1
+}
 
-    $arguments = @("-o", "Port=$SERVER_PORT", "-o", "IdentityFile=$KEY_FILE_NAME", "-o", "UserKnownHostsFile=$KNOWN_HOSTS_FILE_NAME", "-o", "BatchMode=yes", "$CLIENT@$SERVER")
-    Write-Output "get hc_uuid $DUPLICACY_BASEDIR\" | & "C:\Windows\System32\OpenSSH\sftp.exe" @arguments
+if (!(Test-Path "$DUPLICACY_BASEDIR\hc_uuid")) {
+    Write-Output "get hc_uuid $DUPLICACY_BASEDIR\" | & "C:\Windows\System32\OpenSSH\sftp.exe" @sftp_arguments
 }
 
 $hc_uuid = Get-Content "$DUPLICACY_BASEDIR\hc_uuid" -First 1
@@ -76,8 +81,7 @@ else {
     }
 }
 
-$arguments = @("-o", "Port=$SERVER_PORT", "-o", "IdentityFile=$KEY_FILE_NAME", "-o", "UserKnownHostsFile=$KNOWN_HOSTS_FILE_NAME", "-o", "BatchMode=yes", "$CLIENT@$SERVER")
-Write-Output "put ""$log_file"" backup/logs/`nrm ""backup/logs/duplicacy.$CLIENT.latest.txt""`nsymlink ""$log_file_name"" ""backup/logs/duplicacy.$CLIENT.latest.txt""" | & "C:\Windows\System32\OpenSSH\sftp.exe" @arguments
+Write-Output "put ""$log_file"" backup/logs/`nrm ""backup/logs/duplicacy.$CLIENT.latest.txt""`nsymlink ""$log_file_name"" ""backup/logs/duplicacy.$CLIENT.latest.txt""" | & "C:\Windows\System32\OpenSSH\sftp.exe" @sftp_arguments
 
 if ($LASTEXITCODE -eq 0) {
     Remove-Item "$log_file"
