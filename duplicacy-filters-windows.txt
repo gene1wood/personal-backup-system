@@ -112,6 +112,7 @@ e:(?i)/IconCache\.db
 
 ## "packages" is because of "skype modern app" which throws an error even with -vss flag (and duplicacy stops). I have opened a bug to for duplicacy.
 e:(?i)/AppData/Local/Packages/
+e:(?i)^[^/]+-AppData-Local/Packages/
 
 
 e:(?i)/AppData/[^/]+/Acronis/
@@ -138,24 +139,50 @@ e:(?i)/AppData/[^/]+/Sun/
 e:(?i)/AppData/[^/]+/TileDataLayer/
 e:(?i)/AppData/[^/]+/Veeam/
 e:(?i)/AppData/[^/]+/VirtualStore/
+e:(?i)^[^/]+-AppData-Roaming/Acronis/
+e:(?i)^[^/]+-AppData-Roaming/Adobe/
+e:(?i)^[^/]+-AppData-Roaming/Atlassian/SourceTree/[^/]*local/
+e:(?i)^[^/]+-AppData-Roaming/Comms/
+e:(?i)^[^/]+-AppData-Roaming/ConnectedDevicesPlatform/
+e:(?i)^[^/]+-AppData-Roaming/CrashDumps/
+e:(?i)^[^/]+-AppData-Roaming/CrashPlan/
+e:(?i)^[^/]+-AppData-Roaming/DBG/
+e:(?i)^[^/]+-AppData-Roaming/Diagnostics/
+e:(?i)^[^/]+-AppData-Roaming/Downloaded Installations/
+e:(?i)^[^/]+-AppData-Roaming/Dropbox/
+e:(?i)^[^/]+-AppData-Roaming/Duplicati/
+e:(?i)^[^/]+-AppData-Roaming/ElevatedDiagnostics/
+e:(?i)^[^/]+-AppData-Roaming/JetBrains/
+e:(?i)^[^/]+-AppData-Roaming/NVIDIA[^/]*/
+e:(?i)^[^/]+-AppData-Roaming/Oracle/
+e:(?i)^[^/]+-AppData-Roaming/Packages/
+e:(?i)^[^/]+-AppData-Roaming/PackageStaging/
+e:(?i)^[^/]+-AppData-Roaming/PeerDistRepub/
+e:(?i)^[^/]+-AppData-Roaming/Publishers/
+e:(?i)^[^/]+-AppData-Roaming/Sun/
+e:(?i)^[^/]+-AppData-Roaming/TileDataLayer/
+e:(?i)^[^/]+-AppData-Roaming/Veeam/
+e:(?i)^[^/]+-AppData-Roaming/VirtualStore/
 
 
 
-## include Firefox profiles but nothing else from Mozilla
-i:(?i)/AppData/[^/]+/Mozilla/$
-i:(?i)/AppData/[^/]+/Mozilla/Firefox/
-e:(?i)/AppData/[^/]+/Mozilla/
+## exclude some Firefox items
+e:(?i)/AppData/[^/]+/Mozilla/Firefox/Crash Reports
+e:(?i)/AppData/[^/]+/Mozilla/Firefox/Profiles/[^/]+/shader-cache/
+e:(?i)^[^/]+-AppData-Roaming/Mozilla/Firefox/Crash Reports
+e:(?i)^[^/]+-AppData-Roaming/Mozilla/Firefox/Profiles/[^/]+/shader-cache/
 
-
-## include Chrome profile and Picasa data, but nothing else from Google
-## note that we include the whole profile, because we are unsure how many "users" are added beside the "Default" profile
-i:(?i)/AppData/[^/]+/Google/$
-i:(?i)/AppData/[^/]+/Google/Chrome/$
+## Chrome
 e:(?i)/AppData/[^/]+/Google/Chrome/.*Safe Browsing
+e:(?i)^[^/]+-AppData-Roaming/Google/Chrome/.*Safe Browsing
 
-i:(?i)/AppData/[^/]+/Google/Chrome/User Data/
-i:(?i)/AppData/[^/]+/Google/Picasa[^/]*/
-e:(?i)/AppData/[^/]+/Google/
 
-# Keybase cache
-e:/Keybase/Cache/
+## Keybase
+e:(?i)/AppData/[^/]+/Keybase/
+e:(?i)^[^/]+-AppData-Roaming/Keybase/
+
+## Windows
+e:(?i)/AppData/[^/]+/Microsoft/Windows/Recent/
+e:(?i)/AppData/[^/]+/Microsoft/Windows/Themes/CachedFiles/
+e:(?i)^[^/]+-AppData-Roaming/Microsoft/Windows/Recent/
+e:(?i)^[^/]+-AppData-Roaming/Microsoft/Windows/Themes/CachedFiles/
