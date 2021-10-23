@@ -28,3 +28,5 @@ e:/\.local/share/Steam/
 e:/\.config/sublime-text-3/Cache/
 e:/\.config/google-chrome/ShaderCache/
 e:/\.config/chromium/ShaderCache/
+# https://support.plex.tv/articles/201370363-move-an-install-to-another-system/#toc-1
+e:Library/Application Support/Plex Media Server/Cache/
