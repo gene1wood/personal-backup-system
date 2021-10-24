@@ -88,6 +88,10 @@ icacls $KEY_FILE_NAME /c /t /remove Administrator "Authenticated Users" Everyone
 # Verify
 icacls $KEY_FILE_NAME
 
+Write-Output $KNOWN_HOSTS_STRING | Out-File -FilePath "$DUPLICACY_BASEDIR\keys\known_hosts"
+$KNOWN_HOSTS_FILE = Get-Item "$DUPLICACY_BASEDIR\keys\known_hosts"
+$KNOWN_HOSTS_FILE_NAME = $KNOWN_HOSTS_FILE.FullName
+
 $sftp_arguments = @('-o', 'BatchMode=yes', '-o', "Port=$SERVER_PORT", '-o', "IdentityFile=$KEY_FILE_NAME", '-o', "UserKnownHostsFile=$KNOWN_HOSTS_FILE_NAME", "$CLIENT@$SERVER")
 while ($true) {
     Write-Output "pwd" | & "C:\Windows\System32\OpenSSH\sftp.exe" @sftp_arguments | findstr "Remote working directory: /"
@@ -112,10 +116,6 @@ $arguments = @('init', '-encrypt', '-repository', "$DUPLICACY_BASEDIR\backup", $
 if (!(Test-Path -Path "$DUPLICACY_BASEDIR\backup\.duplicacy\preferences" -PathType Leaf)) {
     throw "$DUPLICACY_BASEDIR\backup\.duplicacy\preferences wasn't created on duplicacy init. aborting"
 }
-
-Write-Output $KNOWN_HOSTS_STRING | Out-File -FilePath "$DUPLICACY_BASEDIR\keys\known_hosts"
-$KNOWN_HOSTS_FILE = Get-Item "$DUPLICACY_BASEDIR\keys\known_hosts"
-$KNOWN_HOSTS_FILE_NAME = $KNOWN_HOSTS_FILE.FullName
 
 Write-Output 'mkdir backup/logs' | & sftp @sftp_arguments
 
