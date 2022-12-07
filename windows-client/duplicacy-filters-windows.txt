@@ -186,3 +186,8 @@ e:(?i)/AppData/[^/]+/Microsoft/Windows/Recent/
 e:(?i)/AppData/[^/]+/Microsoft/Windows/Themes/CachedFiles/
 e:(?i)^[^/]+-AppData-Roaming/Microsoft/Windows/Recent/
 e:(?i)^[^/]+-AppData-Roaming/Microsoft/Windows/Themes/CachedFiles/
+
+## Zoom
+# This is to workaround issues where this error prevents backup "The process cannot access the file because another process has locked a portion of the file."
+e:(?i)^[^/]+-AppData-Roaming/Zoom/
+
