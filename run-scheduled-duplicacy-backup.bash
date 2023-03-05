@@ -23,9 +23,15 @@ CLIENT="`hostname --short`"
     done
 
     kbyte_limit=""
-    if /sbin/ip addr show | grep "inet 204.246.122"; then
-        # This host is in the MSP and should be ratelimited
-        kbyte_limit="-limit-rate 32"
+    if [ "${RATE_LIMIT_IP}" ]; then
+        if /sbin/ip addr show | grep "inet ${RATE_LIMIT_IP}"; then
+            # This host should be ratelimited
+            if [ "${RATE_LIMIT_RATE}" ]; then
+                kbyte_limit="-limit-rate ${RATE_LIMIT_RATE}"
+            else
+                kbyte_limit="-limit-rate 32"
+            fi
+        fi
     fi
     KEY_FILE="`readlink -f ${DUPLICACY_BASEDIR}/keys/id_*_${CLIENT}`"
     KNOWN_HOSTS=${DUPLICACY_BASEDIR}/keys/known_hosts
