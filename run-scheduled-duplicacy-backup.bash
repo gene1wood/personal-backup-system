@@ -31,7 +31,7 @@ duplicacy_prune () {
 
     log_file_name="duplicacy.${CLIENT}.`date +%Y%m%d%H%M%S`.txt"
     log_file="${LOG_BASEDIR}/${log_file_name}"
-    echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Beginning run-scheduled-duplicacy-backup-secure.bash version $VERSION" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
+    echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Beginning run-scheduled-duplicacy-backup.bash version $VERSION" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
 
     i=0
     while test "$i" -lt 5 && ! wget -q --spider http://www.google.com/; do
