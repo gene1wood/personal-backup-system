@@ -2,11 +2,11 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=1.0.0
+VERSION=1.0.1
 . /opt/duplicacy/bin/config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" ]; then
     echo "Config isn't set. Aborting"
-    echo 1
+    exit 1
 fi
 DUPLICACY_BASEDIR=/opt/duplicacy
 LOG_BASEDIR="${DUPLICACY_BASEDIR}/logs"
