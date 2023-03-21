@@ -3,7 +3,7 @@
 
 Set-PSDebug -Trace 2
 
-$version = "1.0.1"
+$version = "1.0.2"
 Write-Output "$(Get-Date -UFormat "%Y-%m-%d %H:%M:%S.000") Starting"
 $USERNAME = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 Write-Output "Running as $USERNAME"
@@ -98,6 +98,7 @@ else {
     }
     else {
         Write-Output "$(Get-Date -UFormat "%Y-%m-%d %H:%M:%S.000") INFO PARENT_UPDATE Skipping prune as data on server is owned by root" | Tee-Object -Append $log_file >> "$LOG_BASEDIR/duplicacy.$CLIENT.txt"
+        Invoke-WebRequest "https://hc-ping.com/$hc_uuid" -MaximumRetryCount 3 -RetryIntervalSec 1
     }
 }
 
