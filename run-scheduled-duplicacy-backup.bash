@@ -2,7 +2,7 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=1.0.1
+VERSION=1.0.3
 . /opt/duplicacy/bin/config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" ]; then
     echo "Config isn't set. Aborting"
@@ -82,6 +82,7 @@ duplicacy_prune () {
         if [ "$DIRECTORY_OWNER" -a "$DIRECTORY_OWNER" != "0" ]; then
             duplicacy_prune
         else
+            curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}
             echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Skipping prune as data on server is owned by root" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
         fi
     fi
