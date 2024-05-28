@@ -1,21 +1,27 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
-DUPLICACY_URL="https://github.com/gilbertchen/duplicacy/releases/download/v3.0.1/duplicacy_linux_x64_3.0.1"
+DUPLICACY_URL="https://github.com/gilbertchen/duplicacy/releases/download/v3.1.0/duplicacy_linux_x64_3.1.0"
 DUPLICACY_BASEDIR=/opt/duplicacy
 
+message () {
+  GREEN='\033[1;32m'
+  NOCOLOR='\033[0m' # No Color
+  echo -e "${GREEN}$1${NOCOLOR}"
+}
+
 if [ ! -e config.bash ]; then
-  echo "Unable to find config.bash"
+  message "Unable to find config.bash"
   exit 1
 fi
 
 source config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" -o -z "${KNOWN_HOSTS_STRING}" ]; then
-    echo "Config variables are missing. export SERVER SERVER_PORT and KNOWN_HOSTS_STRING and run this setup again."
+    message "Config variables are missing. export SERVER SERVER_PORT and KNOWN_HOSTS_STRING and run this setup again."
     exit 1
 fi
 
-while ! (which sftp && which wget) >/dev/null; do
-    echo "Unable to find executable sftp, it needs to be installed"
+while ! (which sftp && which wget && which openssl) >/dev/null; do
+    message "Unable to find some executable (sftp, wget, openss), they need to be installed"
     read -s -n 1 -p "Go do this, then press any key to continue . . ."
 done
 
@@ -27,8 +33,8 @@ if [[ ! -e "${DUPLICACY_BASEDIR}/bin/duplicacy" ]]; then
 fi
 
 while [ $(ls -1 ${DUPLICACY_BASEDIR}/backup | wc -l) -le 1 ]; do
-    echo "You'll need to setup all you symbolic links in ${DUPLICACY_BASEDIR}/backup/"
-    echo "Example : ln --verbose --symbolic /boot ${DUPLICACY_BASEDIR}/backup/boot"
+    message "You'll need to setup all you symbolic links in ${DUPLICACY_BASEDIR}/backup/"
+    message "Example : ln --verbose --symbolic /boot ${DUPLICACY_BASEDIR}/backup/boot"
     read -s -n 1 -p "Go do this, then press any key to continue . . ."
 done
 
@@ -37,7 +43,7 @@ CLIENT=$(hostname --short)
 KEY_FILE="`readlink -f ${DUPLICACY_BASEDIR}/keys/id_*_${CLIENT}`"
 
 while [[ ! -e "${KEY_FILE}" ]]; do
-    echo "Copy the private key over from the server into ${KEY_FILE}"
+    message "Copy the private key over from the server into ${KEY_FILE}"
     read -s -n 1 -p "Go do this, then press any key to continue . . ."
     KEY_FILE="`readlink -f ${DUPLICACY_BASEDIR}/keys/id_*_${CLIENT}`"
 done
@@ -47,21 +53,37 @@ KNOWN_HOSTS=${DUPLICACY_BASEDIR}/keys/known_hosts
 echo -e "${KNOWN_HOSTS_STRING}" > ${KNOWN_HOSTS}
 
 cd ${DUPLICACY_BASEDIR}/backup
-echo "About to initialize the backup. Enter the encryption password you'd like to use with this backup when prompted"
-DUPLICACY_SSH_KEY_FILE=${KEY_FILE} "${DUPLICACY_BASEDIR}/bin/duplicacy" init -encrypt -repository ${DUPLICACY_BASEDIR}/backup ${CLIENT} sftp://${CLIENT}@${SERVER}:${SERVER_PORT}/backup
+
+while [ -z "$ENCRYPTION_ARGUMENT" ]; do
+    read -p "Would you like synchronous encryption or RSA asynchronous encryption? (sync / async) : "
+    if [ "$REPLY" = "sync" ]; then
+      ENCRYPTION_ARGUMENT="-encrypt"
+    elif [ "$REPLY" = "async" ]; then
+      if ! [ -e "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" ]; then
+        openssl genrsa -aes256 -out "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" 2048
+        openssl rsa -in  "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" -pubout -out "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_public.pem"
+      fi
+      ENCRYPTION_ARGUMENT="-encrypt -key ${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_public.pem"
+    else
+      message "Please type sync or async"
+    fi
+done
+
+message "About to initialize the backup. Enter the encryption password you'd like to use with this backup when prompted for the \"storage password\""
+DUPLICACY_SSH_KEY_FILE="${KEY_FILE}" "${DUPLICACY_BASEDIR}/bin/duplicacy" init ${ENCRYPTION_ARGUMENT} -repository ${DUPLICACY_BASEDIR}/backup ${CLIENT} sftp://${CLIENT}@${SERVER}:${SERVER_PORT}/backup
 # This is where you interactively enter the password
 echo "mkdir backup/logs" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER}
 
 FILTER_FILE="${DUPLICACY_BASEDIR}/backup/.duplicacy/filters"
 if [[ ! -e "${FILTER_FILE}" ]]; then
-    echo "Fetching /opt/duplicacy/backup/.duplicacy/filters"
+    message "Fetching /opt/duplicacy/backup/.duplicacy/filters"
     wget -O "${FILTER_FILE}" https://raw.githubusercontent.com/gene1wood/personal-backup-system/master/duplicacy-filters-linux.txt
 fi
 
 "${DUPLICACY_BASEDIR}/bin/duplicacy" set -key ssh_key_file -value "${KEY_FILE}"
 
 while ! grep '"password"' ${DUPLICACY_BASEDIR}/backup/.duplicacy/preferences >/dev/null; do
-    echo "You'll need to manually add the encryption password to /opt/duplicacy/backup/.duplicacy/preferences under keys... password"
+    message "You'll need to manually add the encryption password to /opt/duplicacy/backup/.duplicacy/preferences under keys... password"
     # Probably want to avoid using set until this bug is fixed https://github.com/gilbertchen/duplicacy/issues/526
     # Or maybe not? Maybe the issue was the double quotes around the password? Though "&<>" are all escaped by the go json library
     # it doesn't seem to be a problem.
@@ -107,12 +129,10 @@ RandomizedDelaySec=10800
 WantedBy=timers.target
 END-OF-FILE
     systemctl enable scheduled-duplicacy-backup.timer --now
-    cat << EOF
-# To do a real first backup
-# For systemd run (yes, you actually need screen because this will run for a long time)
-screen
-systemctl start scheduled-duplicacy-backup.service
-EOF
+    message "# To do a real first backup"
+    message "# For systemd run (yes, you actually need screen because this will run for a long time)"
+    message "screen"
+    message "systemctl start scheduled-duplicacy-backup.service"
 else
     # Note : the \$ is to escape the HEREDOC. The \% is to escape the crontab
     cat << END-OF-FILE > /etc/cron.d/scheduled-duplicacy-backup.cron
@@ -121,16 +141,13 @@ SHELL=/bin/bash
 # Delay between 0 and 3 hours in seconds (3 * 60 * 60 = 10800)
 0 1 * * * root sleep \$[RANDOM \% 10800]; ${DUPLICACY_BASEDIR}/bin/run-scheduled-duplicacy-backup.bash
 END-OF-FILE
-    cat << EOF
-# To do a real first backup
-# For cron run
-screen
-/opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
-EOF
+  message "# To do a real first backup"
+  message "# For cron run"
+  message "screen"
+  message "/opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash"
 fi
 
-cat << EOF
-To do a dry run to see what would be backed up run
-cd ${DUPLICACY_BASEDIR}/backup
-${DUPLICACY_BASEDIR}/bin/duplicacy backup -stats -dry-run | tee -a ${DUPLICACY_BASEDIR}/logs/duplicacy.dry-run.${CLIENT}.\`date +%Y%m%d%H%M%S\`.txt
-EOF
+message "To do a dry run to see what would be backed up run"
+message "cd ${DUPLICACY_BASEDIR}/backup"
+message "${DUPLICACY_BASEDIR}/bin/duplicacy backup -stats -dry-run | tee -a ${DUPLICACY_BASEDIR}/logs/duplicacy.dry-run.${CLIENT}.\`date +%Y%m%d%H%M%S\`.txt"
+message "And if you used RSA encryption, remove the private key from the client and store it somewhere safe"

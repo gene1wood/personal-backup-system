@@ -29,7 +29,7 @@ duplicacy_prune () {
 
     >${LOG_BASEDIR}/duplicacy.${CLIENT}.lastrun.txt
 
-    log_file_name="duplicacy.${CLIENT}.`date +%Y%m%d%H%M%S`.txt"
+    log_file_name="duplicacy.$(hostname --short).`date +%Y%m%d%H%M%S`.txt"
     log_file="${LOG_BASEDIR}/${log_file_name}"
     echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Beginning run-scheduled-duplicacy-backup.bash version $VERSION" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
 
@@ -50,12 +50,13 @@ duplicacy_prune () {
             fi
         fi
     fi
-    KEY_FILE="`readlink -f ${DUPLICACY_BASEDIR}/keys/id_*_${CLIENT}`"
+    KEY_FILE="`readlink -f ${DUPLICACY_BASEDIR}/keys/id_*_$(hostname --short)`"
     KNOWN_HOSTS=${DUPLICACY_BASEDIR}/keys/known_hosts
-    if ! test -e ${DUPLICACY_BASEDIR}/hc_uuid; then
-        echo "get hc_uuid ${DUPLICACY_BASEDIR}/" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1
+    if ! test -e ${DUPLICACY_BASEDIR}/hc_uuid.$(hostname --short); then
+        echo "get hc_uuid.$(hostname --short) ${DUPLICACY_BASEDIR}/" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1
+        echo
     fi
-    hc_uuid="`cat ${DUPLICACY_BASEDIR}/hc_uuid`"
+    hc_uuid="`cat ${DUPLICACY_BASEDIR}/hc_uuid.$(hostname --short)`"
     curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/start
     cd ${DUPLICACY_BASEDIR}/backup
 
@@ -94,7 +95,7 @@ duplicacy_prune () {
     upload_command="put \"${log_file}\" backup/logs/"
     if [ "$DIRECTORY_OWNER" -a "$DIRECTORY_OWNER" != "0" ]; then
         # If we have permission to modify things, then update the symlink pointing to the latest log
-        upload_command="${upload_command}\nrm \"backup/logs/duplicacy.${CLIENT}.latest.txt\"\nsymlink \"${log_file_name}\" \"backup/logs/duplicacy.${CLIENT}.latest.txt\""
+        upload_command="${upload_command}\nrm \"backup/logs/duplicacy.$(hostname --short).latest.txt\"\nsymlink \"${log_file_name}\" \"backup/logs/duplicacy.$(hostname --short).latest.txt\""
     fi
     echo -e "${upload_command}" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1 && rm --force --verbose "${log_file}"
     echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Run complete, log uploaded to the server" | tee -a "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
