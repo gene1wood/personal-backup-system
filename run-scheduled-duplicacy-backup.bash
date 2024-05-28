@@ -2,7 +2,7 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=1.0.4
+VERSION=1.0.5
 . /opt/duplicacy/bin/config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" ]; then
     echo "Config isn't set. Aborting"
@@ -14,7 +14,8 @@ CLIENT="${CLIENT:-$(hostname --short)}"
 
 duplicacy_prune () {
     echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Beginning prune : duplicacy -log prune -keep 0:360 -keep 30:180 -keep 7:30 -keep 1:7" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
-    if ! ${DUPLICACY_BASEDIR}/bin/duplicacy -log prune -keep 0:360 -keep 30:180 -keep 7:30 -keep 1:7 |tee -a ${log_file}; then
+    ${DUPLICACY_BASEDIR}/bin/duplicacy -log prune -keep 0:360 -keep 30:180 -keep 7:30 -keep 1:7 | tee -a ${log_file}
+    if [ "${PIPESTATUS[0]}" != 0 ]; then
         # TODO : Decide if we should put a -threads argument in the prune
         curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Prune failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
@@ -25,7 +26,7 @@ duplicacy_prune () {
 }
 
 (
-    flock -n 200 || exit 1
+    flock --nonblock 200 || exit 1
 
     >${LOG_BASEDIR}/duplicacy.${CLIENT}.lastrun.txt
 
@@ -56,8 +57,17 @@ duplicacy_prune () {
         echo "get hc_uuid.$(hostname --short) ${DUPLICACY_BASEDIR}/" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1
         echo
     fi
+    if [ ! -e "${DUPLICACY_BASEDIR}/hc_uuid.$(hostname --short)" ]; then
+        echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Unable to determine healthchecks.io UUID Aborting" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
+        exit 1
+    fi
     hc_uuid="`cat ${DUPLICACY_BASEDIR}/hc_uuid.$(hostname --short)`"
     curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/start
+    if ! echo "pwd" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1 >/dev/null; then
+        echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
+        curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
+        exit 1
+    fi
     cd ${DUPLICACY_BASEDIR}/backup
 
     shopt -s dotglob
@@ -75,7 +85,9 @@ duplicacy_prune () {
     if [ -z "$DIRECTORY_OWNER" ]; then
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Unable to determine owner of directory on server" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
     fi
-    if ! ${DUPLICACY_BASEDIR}/bin/duplicacy -log backup -stats ${kbyte_limit} | tee -a ${log_file}; then
+    ${DUPLICACY_BASEDIR}/bin/duplicacy -log backup -stats ${kbyte_limit} | tee -a ${log_file}
+    # Test the exit code of duplicacy using PIPESTATUS (instead of testing the exit code of tee)
+    if [ "${PIPESTATUS[0]}" != 0 ]; then
         curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Backup failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
     else
