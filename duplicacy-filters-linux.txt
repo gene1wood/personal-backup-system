@@ -31,3 +31,10 @@ e:/\.config/chromium/ShaderCache/
 # https://support.plex.tv/articles/201370363-move-an-install-to-another-system/#toc-1
 e:Library/Application Support/Plex Media Server/Cache/
 e:/\.config/Keybase/GPUCache/
+e:^[^/]+/\.npm/_cacache/
+e:/snap/[^/]*/common/.cache/
+e:^[^/]+/\Library/Caches
+e:^[^/]+/\.zoom/logs
+e:^[^/]+/\.var/app/[^/]*/cache
+e:^[^/]+/\.nv/GLCache
+e:^[^/]+/\.nv/ComputeCache
