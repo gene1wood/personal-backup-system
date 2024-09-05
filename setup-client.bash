@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+VERSION=1.0.0
+
 DUPLICACY_URL="https://github.com/gilbertchen/duplicacy/releases/download/v3.1.0/duplicacy_linux_x64_3.1.0"
 DUPLICACY_BASEDIR=/opt/duplicacy
 
@@ -60,7 +62,13 @@ while [ -z "$ENCRYPTION_ARGUMENT" ]; do
       ENCRYPTION_ARGUMENT="-encrypt"
     elif [ "$REPLY" = "async" ]; then
       if ! [ -e "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" ]; then
-        openssl genrsa -aes256 -out "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" 2048
+        # The need for the -traditional is due to https://forum.duplicacy.com/t/duplicacy-restore-of-encrypted-backup-fails-with-error/3862/14
+        if openssl version | grep "OpenSSL 3" >/dev/null; then
+          TRADITIONAL_ARG="-traditional"
+        else
+          TRADITIONAL_ARG=""
+        fi
+        openssl genrsa -aes256 ${TRADITIONAL_ARG} -out "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" 2048
         openssl rsa -in  "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_private.pem" -pubout -out "${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_public.pem"
       fi
       ENCRYPTION_ARGUMENT="-encrypt -key ${DUPLICACY_BASEDIR}/keys/${CLIENT}_duplicacy_encryption_key_public.pem"
