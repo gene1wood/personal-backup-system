@@ -2,7 +2,7 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=1.0.5
+VERSION=1.1.0
 . /opt/duplicacy/bin/config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" ]; then
     echo "Config isn't set. Aborting"
@@ -29,9 +29,14 @@ duplicacy_prune () {
     flock --nonblock 200 || exit 1
 
     >${LOG_BASEDIR}/duplicacy.${CLIENT}.lastrun.txt
+    chmod 640 "${LOG_BASEDIR}/duplicacy.${CLIENT}.lastrun.txt"
 
     log_file_name="duplicacy.$(hostname --short).`date +%Y%m%d%H%M%S`.txt"
     log_file="${LOG_BASEDIR}/${log_file_name}"
+    touch "${log_file}"
+    chmod 640 "${log_file}"
+    touch "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
+    chmod 640 "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
     echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Beginning run-scheduled-duplicacy-backup.bash version $VERSION" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
 
     i=0
