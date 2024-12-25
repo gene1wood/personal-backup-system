@@ -3,7 +3,7 @@
 
 Set-PSDebug -Trace 2
 
-$version = "1.0.2"
+$version = "1.0.3"
 Write-Output "$(Get-Date -UFormat "%Y-%m-%d %H:%M:%S.000") Starting"
 $USERNAME = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 Write-Output "Running as $USERNAME"
@@ -25,6 +25,10 @@ $KEY_FILE = Get-Item "$DUPLICACY_BASEDIR\keys\id_*_$CLIENT"
 $KEY_FILE_NAME = $KEY_FILE.FullName
 $KNOWN_HOSTS_FILE = Get-Item "$DUPLICACY_BASEDIR\keys\known_hosts"
 $KNOWN_HOSTS_FILE_NAME = $KNOWN_HOSTS_FILE.FullName
+$current_known_hosts_string = Get-Content $KNOWN_HOSTS_FILE_NAME
+If ($current_known_hosts_string -ne $KNOWN_HOSTS_STRING) {
+    $KNOWN_HOSTS_STRING | Out-File $KNOWN_HOSTS_FILE_NAME
+}
 
 $i = 0
 $network_active = 0
@@ -53,7 +57,8 @@ if (!(Test-Path "$DUPLICACY_BASEDIR\hc_uuid")) {
     Write-Output "get hc_uuid $DUPLICACY_BASEDIR\" | & "C:\Windows\System32\OpenSSH\sftp.exe" @sftp_arguments
 }
 
-$hc_uuid = Get-Content "$DUPLICACY_BASEDIR\hc_uuid" -First 1
+$hc_uuid = Get-Content "$DUPLICACY_BASEDIR\hc_uuid" -TotalCount 1
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest "https://hc-ping.com/$hc_uuid/start" -MaximumRetryCount 3 -RetryIntervalSec 1
 
