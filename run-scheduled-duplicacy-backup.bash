@@ -2,7 +2,7 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=1.1.0
+VERSION=1.2.0
 . /opt/duplicacy/bin/config.bash
 if [ -z "${SERVER}" -o -z "${SERVER_PORT}" ]; then
     echo "Config isn't set. Aborting"
@@ -17,7 +17,7 @@ duplicacy_prune () {
     ${DUPLICACY_BASEDIR}/bin/duplicacy -log prune -keep 0:360 -keep 30:180 -keep 7:30 -keep 1:7 | tee -a ${log_file}
     if [ "${PIPESTATUS[0]}" != 0 ]; then
         # TODO : Decide if we should put a -threads argument in the prune
-        curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
+        curl --fail --silent --show-error --retry 3 --data-raw "Duplicacy prune returned a non-zero exit code" https://hc-ping.com/${hc_uuid}/fail
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Prune failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
     else
         curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}
@@ -70,7 +70,7 @@ duplicacy_prune () {
     curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/start
     if ! echo "pwd" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1 >/dev/null; then
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
-        curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
+        curl --fail --silent --show-error --retry 3 --data-raw "Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" https://hc-ping.com/${hc_uuid}/fail
         exit 1
     fi
     cd ${DUPLICACY_BASEDIR}/backup
@@ -93,7 +93,7 @@ duplicacy_prune () {
     ${DUPLICACY_BASEDIR}/bin/duplicacy -log backup -stats ${kbyte_limit} | tee -a ${log_file}
     # Test the exit code of duplicacy using PIPESTATUS (instead of testing the exit code of tee)
     if [ "${PIPESTATUS[0]}" != 0 ]; then
-        curl --fail --silent --show-error --retry 3 https://hc-ping.com/${hc_uuid}/fail
+        curl --fail --silent --show-error --retry 3 --data-raw "Backup failed. Duplicacy returned a non-zero exit-code" https://hc-ping.com/${hc_uuid}/fail
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Backup failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
     else
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Backup succeeded" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT}.txt"
