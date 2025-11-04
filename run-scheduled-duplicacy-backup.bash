@@ -2,13 +2,16 @@
 
 # Install this file in /opt/duplicacy/bin/run-scheduled-duplicacy-backup.bash
 
-VERSION=2.0.0
+VERSION=2.1.0
 . /opt/duplicacy/bin/config.bash
 if [ -z "${HC_UUID}" ]; then
     echo "Config isn't set. Aborting"
     exit 1
 fi
 which python3 >/dev/null || { echo "Unable to find python3" && exit 1; }
+which uuidgen >/dev/null || { echo "Unable to find uuidgen from e2fsprogs" && exit 1; }
+HC_RUN_UUID=$(uuidgen)
+
 if [ -z "${BACKUP_DIRECTORIES}" ]; then
   # config.bash doesn't have BACKUP_DIRECTORIES set
   BACKUP_DIRECTORIES=("/opt/duplicacy/backup")
@@ -23,7 +26,7 @@ duplicacy_prune () {
     ${DUPLICACY_BASEDIR}/bin/duplicacy -log prune -keep 0:360 -keep 30:180 -keep 7:30 -keep 1:7 | tee -a ${log_file}
     if [ "${PIPESTATUS[0]}" != 0 ]; then
         # TODO : Decide if we should put a -threads argument in the prune
-        curl --fail --silent --show-error --retry 3 --data-raw "Duplicacy prune returned a non-zero exit code" https://hc-ping.com/${HC_UUID}/fail
+        curl --fail --silent --show-error --retry 3 --data-raw "Duplicacy prune returned a non-zero exit code" https://hc-ping.com/${HC_UUID}/fail?rid=${HC_RUN_UUID}
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Prune failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.txt"
     else
         echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Prune succeeded" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.txt"
@@ -67,7 +70,7 @@ duplicacy_prune () {
     KNOWN_HOSTS=${DUPLICACY_BASEDIR}/keys/known_hosts
 
     # Tell healtchecks.io to start
-    curl --fail --silent --show-error --retry 3 https://hc-ping.com/${HC_UUID}/start
+    curl --fail --silent --show-error --retry 3 --data-raw "Duplicacy run-scheduled-duplicacy-backup.bash version $VERSION starting" https://hc-ping.com/${HC_UUID}/start?rid=${HC_RUN_UUID}
 
     # Enter backup directory
     for backup_directory in "${BACKUP_DIRECTORIES[@]}"; do
@@ -87,7 +90,7 @@ duplicacy_prune () {
             # Test sftp connectivity
             if ! echo "pwd" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} >/dev/null 2>&1; then
                 echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.txt"
-                curl --fail --silent --show-error --retry 3 --data-raw "Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" https://hc-ping.com/${HC_UUID}/fail
+                curl --fail --silent --show-error --retry 3 --data-raw "Unable to connect to ${CLIENT}@${SERVER} over sftp Aborting" https://hc-ping.com/${HC_UUID}/fail?rid=${HC_RUN_UUID}
                 RUN_FAILED=True
                 exit 1
             fi
@@ -121,7 +124,7 @@ duplicacy_prune () {
         ${DUPLICACY_BASEDIR}/bin/duplicacy -log backup -stats ${kbyte_limit} | tee -a ${log_file}
         # Test the exit code of duplicacy using PIPESTATUS (instead of testing the exit code of tee)
         if [ "${PIPESTATUS[0]}" != 0 ]; then
-            curl --fail --silent --show-error --retry 3 --data-raw "Backup of ${backup_directory} failed. Duplicacy returned a non-zero exit-code" https://hc-ping.com/${HC_UUID}/fail
+            curl --fail --silent --show-error --retry 3 --data-raw "Backup of ${backup_directory} failed. Duplicacy returned a non-zero exit-code" https://hc-ping.com/${HC_UUID}/fail?rid=${HC_RUN_UUID}
             RUN_FAILED=True
             echo "`date +"%Y-%m-%d %H:%M:%S.000"` ERROR PARENT_UPDATE Backup of ${backup_directory} failed" | tee -a "${log_file}" "${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.txt"
         else
@@ -141,6 +144,7 @@ duplicacy_prune () {
         let "i++"
     done
 
+    tail -13 "${log_file}" | curl --fail --silent --show-error --retry 3 --data @- https://hc-ping.com/${HC_UUID}/log?rid=${HC_RUN_UUID}
     if [ -n "$SERVER" ]; then
         # Upload the logs to the last sftp server in the BACKUP_DIRECTORIES list if there is one
         upload_command="put \"${log_file}\" backup/logs/"
@@ -151,7 +155,7 @@ duplicacy_prune () {
         echo -e "${upload_command}" | sftp -o Port=${SERVER_PORT} -o IdentityFile=${KEY_FILE} -o BatchMode=yes -o UserKnownHostsFile=${KNOWN_HOSTS} ${CLIENT}@${SERVER} 2>&1 && rm --force --verbose "${log_file}"
     fi
     if [ "$RUN_FAILED" != "True" ]; then
-        curl --fail --silent --show-error --retry 3 https://hc-ping.com/${HC_UUID}
+        curl --fail --silent --show-error --retry 3 --data-raw "Duplicacy run-scheduled-duplicacy-backup.bash version $VERSION completed successfully" https://hc-ping.com/${HC_UUID}?rid=${HC_RUN_UUID}
     fi
     echo "`date +"%Y-%m-%d %H:%M:%S.000"` INFO PARENT_UPDATE Run complete, log uploaded to the server" | tee -a "${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.txt"
 ) 200>/var/lock/duplicacy-backup >>${LOG_BASEDIR}/duplicacy.${CLIENT_INDIVIDUAL_ID}.lastrun.txt
